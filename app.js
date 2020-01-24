@@ -19,6 +19,7 @@ const Room = require('./models/room')
 app.get('/',function(req,res){
     res.sendfile('index.html')
 })
+let pointList=[]
 
 io.on('connection',function(socket){
 
@@ -93,6 +94,7 @@ io.on('connection',function(socket){
             isPlaying : true
         })
         .then((respone)=>{
+            // console.log(respone)
             let dataArena = {
                 _id: data._id,
                 currentRandom: 'back',
@@ -119,6 +121,15 @@ io.on('connection',function(socket){
         socket.on('receiveMessage', function({ username, room, message }) {
             io.in(room).emit('publishMessage',  { username, message });
         })
+// 7. Game Over
+        socket.on('totalPoints', function(data, obj){
+            pointList.push(data)
+            if(pointList.length>=obj.listPlayer.length){
+                console.log('masuk' , obj)
+                io.emit('setwinner', pointList)
+            }
+        })
+
 })
 
 
