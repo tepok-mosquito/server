@@ -66,8 +66,6 @@ io.on('connection',function(socket){
                 if(data){
                     socket.join(data._id)
                     io.sockets.in(data._id).emit('connectRoom',data)
-                }else{
-                    console.log("enggak")
                 }
              })
             .catch(err =>{
@@ -95,8 +93,8 @@ io.on('connection',function(socket){
             isPlaying : true
         })
         .then((respone)=>{
-            console.log(respone)
             let dataArena = {
+                _id: data._id,
                 currentRandom: 'back',
                 listShowed: [],
                 cardsOnDeck: 13,
@@ -115,9 +113,12 @@ io.on('connection',function(socket){
 
 // 6. start Arena
         socket.on('gamePlay', function(data){
-            io.emit('setDataArena',data)
+            io.in(data._id).emit('setDataArena',data)
         })
-
+// 8. chat
+        socket.on('receiveMessage', function({ username, room, message }) {
+            io.in(room).emit('publishMessage',  { username, message });
+        })
 })
 
 
