@@ -21,15 +21,14 @@ app.get('/',function(req,res){
 })
 
 io.on('connection',function(socket){
-    console.log('user connected')
-    console.log(socket.id)
+
 //1. find all created room
     Room.find()
         .then(data=>{
             io.emit('getRooms', data)
         })
         .catch(err =>{
-            console.log(err)
+            // console.log(err)
         })
 
 //2. create Room
@@ -41,29 +40,86 @@ io.on('connection',function(socket){
         .then(data =>{
             socket.join(data._id)
             io.sockets.in(data._id).emit('connectRoom',data)
+            return Room.find()
+        })
+        .then(datas =>{
+            io.emit('getRooms',datas)
         })
         .catch(err=>{
-            console.log(data)
+            // console.log(err)
         })
     })
 //3. join Room
     socket.on('joinRoom',function(roomId, player){
-        Room.findByIdAndUpdate(
-            roomId
-        ,{
-            $push : {players: player}
-        },{new: true})
-        .then(data =>{
-            socket.join(data._id)
-            io.sockets.in(data._id).emit('connectRoom',data)
+        Room.findById(roomId)
+            .then(data=>{
+                if(!data.isPlaying){
+                    return  Room.findByIdAndUpdate(
+                        roomId
+                    ,{
+                        $push : {players: player}
+                    },{new: true})
+                }
+                    return null
+            })
+            .then(data =>{
+                if(data){
+                    socket.join(data._id)
+                    io.sockets.in(data._id).emit('connectRoom',data)
+                }else{
+                    console.log("enggak")
+                }
+             })
+            .catch(err =>{
+            // console.log(err)
         })
-        .catch(err =>{
+    })
+//4. Exit room
+    socket.on('exitRoom', function(roomId, player){
+        Room.findById(roomId)
+            .then(data=>{
+                data.players = data.players.filter(element =>
+                        element !== player
+                    )
+                data.save({
+                    validateBeforeSave: false
+                })
+            })
+            .catch(err=>{
+                // console.log(err)
+            })
+    })
+//5. Game Play
+    socket.on('joinArena', function(data){
+        Room.findByIdAndUpdate(data._id,{
+            isPlaying : true
+        })
+        .then((respone)=>{
+            console.log(respone)
+            let dataArena = {
+                currentRandom: 'back',
+                listShowed: [],
+                cardsOnDeck: 13,
+                cardsShown: 0,
+                cardList: [ null,'2','3','4','5','6','7','8','9','10','Jack', 'Queen', 'King', 'As'],
+                listPlayer: data.players,
+                count: 0,
+            }
+            // console.log(dataArena,'masuk sini')
+            io.emit('setDataArena', dataArena)
+        })
+        .catch(err=>{
             console.log(err)
         })
     })
 
+// 6. start Arena
+        socket.on('gamePlay', function(data){
+            io.emit('setDataArena',data)
+        })
 
 })
+
 
 http.listen(3000, function(){
     console.log('listen on localhost:3000')
